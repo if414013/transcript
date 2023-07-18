@@ -1,0 +1,98 @@
+import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.tasks.bundling.Jar
+
+plugins {
+    id 'java-library'
+    id 'groovy'
+    id 'maven-publish'
+    id 'com.jfrog.artifactory' version '4.29.2'
+}
+
+group 'com.gopay'
+def base_version = "0.0.10"
+def target_repository = "gopay-snapshot-local"
+
+if (project.hasProperty('build_suffix')) {
+    version "${base_version}-${build_suffix}"
+    if (build_suffix == 'RELEASE') {
+        target_repository = "gopay-release-local"
+    }
+} else {
+    version base_version + "-SNAPSHOT"
+}
+
+repositories {
+    mavenLocal()
+    maven {
+        url "http://artifactory-gopay.golabs.io/artifactory/gopay-libs-releases"
+        allowInsecureProtocol true
+    }
+    mavenCentral()
+}
+
+dependencies {
+
+    implementation 'com.squareup.retrofit2:retrofit:2.5.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:3.9.1'
+    implementation 'com.squareup.retrofit2:retrofit-mock:2.3.0'
+
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.0'
+
+    implementation 'ch.qos.logback:logback-core:1.4.7'
+    implementation 'ch.qos.logback:logback-classic:1.4.7'
+
+    compileOnly 'org.projectlombok:lombok:1.18.26'
+    annotationProcessor 'org.projectlombok:lombok:1.18.26'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.8.0'
+    testImplementation 'org.mockito:mockito-core:3.11.0'
+    testImplementation 'org.mockito:mockito-inline:4.6.1'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allJava
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ["src/main/java"]
+        }
+    }
+    test {
+        java {
+            srcDirs = ["src/test/java"]
+        }
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+}
+
+artifactory {
+    contextUrl = "http://artifactory-gopay.golabs.io/artifactory/"
+    publish {
+        defaults {
+            publications('mavenJava')
+        }
+        repository {
+            repoKey = "${target_repository}"
+            username = "admin"
+            password = "password"
+            maven = true
+        }
+    }
+}
+
+
+
+
